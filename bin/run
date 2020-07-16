@@ -1,7 +1,20 @@
 #!/usr/bin/env node
-
+require('dotenv').config()
 var QuickbooksServer = require('../index');
 var quickbooksServer = new QuickbooksServer();
 var qbXMLHandler = require('./qbXMLHandler');
-quickbooksServer.setQBXMLHandler(qbXMLHandler);
-quickbooksServer.run();
+var mongoUtils = require('../lib/mongoUtil');
+
+mongoUtils.connectToServer( function(err) {
+  if(err) console.log(err);
+  quickbooksServer.setQBXMLHandler(qbXMLHandler);
+  quickbooksServer.run();
+})
+
+process.on('SIGINT', function () {
+  mongoUtils.closeConnection(function (err) {
+    if(err) console.log(err);
+    console.log('MongoClient successfully disconnected');
+    process.exit(0);
+  });
+});
