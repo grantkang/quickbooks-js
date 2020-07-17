@@ -10,7 +10,7 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
+var mongoUtil = require('../../lib/mongoUtil')
 var data2xml = require('data2xml');
 var convert = data2xml({
         xmlHeader: '<?xml version="1.0" encoding="utf-8"?>\n<?qbxml version="13.0"?>\n'
@@ -20,13 +20,14 @@ var convert = data2xml({
 module.exports = {
 
     /**
-     * Builds an array of qbXML commands
-     * to be run by QBWC.
+     * Fetches all unproccessed qbsdk requests
      *
      * @param callback(err, requestArray)
      */
-    fetchRequests: function(callback) {
-        buildRequests(callback);
+    fetchRequests: function (callback) {
+        mongoUtil.getUnprocessedTasks(function(tasks) {
+            callback(null, tasks)
+        })
     },
 
     /**
@@ -35,7 +36,10 @@ module.exports = {
      *
      * @param response - qbXML response
      */
-    handleResponse: function(response) {
+    handleResponse: function(ticket, response) {
+        mongoUtil.processTaskByTicket(ticket, function(err) {
+            if(err) console.log(err);
+        })
         console.log(response);
     },
 
@@ -47,23 +51,29 @@ module.exports = {
      */
     didReceiveError: function(error) {
         console.log(error);
-    }
-};
+    },
 
-function buildRequests(callback) {
-    var requests = new Array();
-    var xml = convert(
-        'QBXML',
-        {
-            QBXMLMsgsRq : {
-                _attr : { onError : 'stopOnError' },
-                ItemInventoryQueryRq : {
-                    MaxReturned: 1000,
+    /**
+    * Builds a qbXML command from a qbsdk request
+    * to be run by QBWC.
+    *
+    * @param callback(err, requestArray)
+    */
+    buildXML: function(ticket, task) {
+        mongoUtil.setTicketToTask(task._id, ticket, function(err) {
+            if(err) console.log(err);
+        });
+        var xml = convert(
+            'QBXML',
+            {
+                QBXMLMsgsRq: {
+                    _attr: { onError: 'stopOnError' },
+                    ItemInventoryQueryRq: {
+                        MaxReturned: 1
+                    },
                 },
-            },
-        }
-    );
-    requests.push(xml);
-
-    return callback(null, requests);
+            }
+        );
+        return xml;
+    }
 }
