@@ -33,42 +33,59 @@ function Client() {
  */
 Client.prototype.createClient = function(callback) {
     var that = this;
-    soap.createClient(url, function(err, client) {
-        if (err) return callback(err);
-        that.client = client;
-        return callback(null);
-    });
+    if(!callback) {
+        return (async function() {
+            that.client = await soap.createClientAsync(url);
+        })();
+    } else {
+        soap.createClient(url, function (err, client) {
+            if (err) return callback(err);
+            that.client = client;
+            return callback(null);
+        });
+    }
 };
 
 /**
- * Makes the call to the `serverVersion`
+ * Makes the call to the `serverVersionAsync`
  * endpoint required by QBWC
  *
  * @param callback(err, result)
  */
 Client.prototype.serverVersion = function(callback) {
-    this.client.serverVersion({}, function(err, result) {
+    if (!callback) return this.client.serverVersionAsync();
+
+    this.client.serverVersion({}, function (err, result) {
         return callback(err, result);
     });
 };
 
 Client.prototype.clientVersion = function(callback) {
     var args = {strVersion: '2.1.0.30'};
-    this.client.clientVersion(args, function(err, result) {
+
+    if (!callback) return this.client.clientVersionAsync(args);
+
+    this.client.clientVersion(args, function (err, result) {
         return callback(err, result);
     });
 };
 
 Client.prototype.clientVersionBelowMinimum = function(callback) {
     var args = {strVersion: '0.1.0'};
-    this.client.clientVersion(args, function(err, result) {
+
+    if (!callback) return this.client.clientVersionAsync(args);
+
+    this.client.clientVersion(args, function (err, result) {
         return callback(err, result);
     });
 };
 
 Client.prototype.clientVersionBelowRecommended = function(callback) {
     var args = {strVersion: '2.0.0'};
-    this.client.clientVersion(args, function(err, result) {
+
+    if (!callback) return this.client.clientVersionAsync(args);
+
+    this.client.clientVersion(args, function (err, result) {
         return callback(err, result);
     });
 };
@@ -78,7 +95,10 @@ Client.prototype.authenticateWithCorrectUsernameAndPassword = function(callback)
         strUserName: process.env.QB_USERNAME || 'username',
         strPassword: process.env.QB_PASSWORD || 'password'
     };
-    this.client.authenticate(args, function(err, result) {
+
+    if (!callback) return this.client.authenticateAsync(args);
+
+    this.client.authenticate(args, function (err, result) {
         return callback(err, result);
     });
 };
@@ -88,27 +108,42 @@ Client.prototype.authenticateWithIncorrectUsernameAndPassword = function(callbac
         strUserName: 'wrongusername',
         strPassword: 'badpassword'
     };
-    this.client.authenticate(args, function(err, result) {
+
+    if (!callback) return this.client.authenticateAsync(args);
+
+    this.client.authenticate(args, function (err, result) {
         return callback(err, result);
     });
+
 };
 
 Client.prototype.sendXMLRequest = function(callback) {
     var args = {};
-    this.client.sendRequestXML(args, function(err, result) {
+
+    if (!callback) return this.client.sendRequestXMLAsync(args);
+
+    this.client.sendRequestXML(args, function (err, result) {
         return callback(err, result);
     });
+
 };
 
 Client.prototype.receiveResponseXML = function(callback) {
-    var args = {hresult: ''};
-    this.client.receiveResponseXML(args, function(err, result) {
+    var args = { hresult: '' };
+
+    if (!callback) return this.client.receiveResponseXMLAsync(args);
+
+    this.client.receiveResponseXML(args, function (err, result) {
         return callback(err, result);
     });
+
 };
 
 Client.prototype.receiveResponseXMLWithError = function(callback) {
     var args = {hresult: '0x80040408'};
+
+    if (!callback) return this.client.receiveResponseXMLAsync(args);
+
     this.client.receiveResponseXML(args, function(err, result) {
         return callback(err, result);
     });
@@ -116,6 +151,9 @@ Client.prototype.receiveResponseXMLWithError = function(callback) {
 
 Client.prototype.connectionError = function(callback) {
     var args = {hresult: '0x80040408', message: 'QuickBooks found an error when parsing the provided XML text stream.'};
+
+    if (!callback) return this.client.connectionErrorAsync(args);
+
     this.client.connectionError(args, function(err, result) {
         return callback(err, result);
     });
@@ -123,6 +161,9 @@ Client.prototype.connectionError = function(callback) {
 
 Client.prototype.closeConnection = function(callback) {
     var args = {};
+
+    if (!callback) return this.client.closeConnectionAsync(args);
+
     this.client.closeConnection(args, function(err, result) {
         return callback(err, result);
     });
@@ -130,6 +171,9 @@ Client.prototype.closeConnection = function(callback) {
 
 Client.prototype.getLastError = function(callback) {
     var args = {};
+
+    if (!callback) return this.client.getLastErrorAsync(args);
+
     this.client.getLastError(args, function(err, result) {
         return callback(err, result);
     });
