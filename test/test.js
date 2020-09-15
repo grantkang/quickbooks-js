@@ -42,7 +42,7 @@ describe('Soap Client', function() {
     it('should run client version method', function(done) {
           soapClient.clientVersion(function(err, result) {
             if (err) { done(err); }
-            assert.deepEqual(result.clientVersionResult.string, {});
+            assert.deepEqual(result.clientVersionResult.string, null);
             done();
         });
     });
@@ -84,11 +84,11 @@ describe('Soap Client', function() {
     });
 
     it('should receive an empty string from sendXMLRequest', function(done) {
-       soapClient.sendXMLRequest(function(err, result) {
-           if (err) { done(err); }
-           assert.deepEqual(result.sendRequestXMLResult.string, {}, 'String should be blank');
-           done();
-       });
+        soapClient.sendXMLRequest(function(err, result) {
+            if (err) { done(err); }
+            assert.deepEqual(result.sendRequestXMLResult.string, null, 'String should be blank');
+            done();
+        });
     });
 
     it('should receive `100` from receiveResponseXML', function(done) {
@@ -129,5 +129,78 @@ describe('Soap Client', function() {
             assert.equal(result.closeConnectionResult.string, 'OK', 'Should receive OK');
             done();
         });
+    });
+
+    it('should start without error (async)', async function() {
+        try {
+            await soapClient.createClient();
+            assert.isNotNull(soapClient.client, "Soap Client should not be null");
+        } catch (error) {
+            throw error;
+        }
+    });
+
+    it('should run server version method (async)', async function() {
+        const [result] = await soapClient.serverVersion();
+        assert.equal(result.serverVersionResult.string, "0.2.0");
+    });
+
+    it('should run client version method (async)', async function() {
+        const [result] = await soapClient.clientVersion();
+        assert.deepEqual(result.clientVersionResult.string, null);
+    });
+
+    it('should be below minimum client version (async)', async function() {
+        const [result] = await soapClient.clientVersionBelowMinimum();
+        assert.deepEqual(result.clientVersionResult.string, 'E:You need to upgrade your QBWebConnector');
+    });
+
+    it('should be below recommended client version (async)', async function() {
+        const [result] = await soapClient.clientVersionBelowRecommended();
+        assert.deepEqual(result.clientVersionResult.string, 'W:It is recommended that you upgrade your QBWebConnector');
+    });
+
+    it('should authenticate correctly (async)', async function() {
+        const [result] = await soapClient.authenticateWithCorrectUsernameAndPassword();
+        assert.isArray(result.authenticateResult.string, 'Authenticate should return an array');
+        assert.isNotNull(result.authenticateResult.string[0], 'Authenticate should return an GUID for the session');
+        assert.notEqual(result.authenticateResult.string[1], 'nvu');
+    });
+
+    it('should not authenticate correctly (async)', async function() {
+        const [result] = await soapClient.authenticateWithIncorrectUsernameAndPassword();
+        assert.isArray(result.authenticateResult.string, 'Authenticate should return an array');
+        assert.isNotNull(result.authenticateResult.string[0], 'Authenticate should return an GUID for the session');
+        assert.equal(result.authenticateResult.string[1], 'nvu');
+    });
+
+    it('should receive an empty string from sendXMLRequest (async)', async function() {
+        const [result] = await soapClient.sendXMLRequest();
+        assert.deepEqual(result.sendRequestXMLResult.string, null, 'String should be blank');
+    });
+
+    it('should receive `100` from receiveResponseXML (async)', async function() {
+        const [result] = await soapClient.receiveResponseXML();
+        assert.equal(result.receiveResponseXMLResult.int, 100, 'Should receive 100%');
+    });
+
+    it('should receive `-101` from receiveResponseXML (async)', async function() {
+        const [result] = await soapClient.receiveResponseXMLWithError();
+        assert.equal(result.receiveResponseXMLResult.int, -101, 'Should receive negative -101');
+    });
+
+    it('should receive `done` from connectionError (async)', async function() {
+        const [result] = await soapClient.connectionError();
+        assert.equal(result.connectionErrorResult.string, 'DONE', 'Should receive DONE');
+    });
+
+    it('should receive error message from getLastError (async)', async function() {
+        const [result] = await soapClient.getLastError();
+        assert.equal(result.getLastErrorResult.string, 'QuickBooks found an error when parsing the provided XML text stream.', 'Should receive error message');
+    });
+
+    it('should receive `OK` from closeConnection (async)', async function() {
+        const [result] = await soapClient.closeConnection();
+        assert.equal(result.closeConnectionResult.string, 'OK', 'Should receive OK');
     });
 });
