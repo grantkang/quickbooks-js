@@ -10,11 +10,14 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-var mongoUtil = require('../../lib/mongoUtil')
+var parseString = require('xml2js').parseString;
+const util = require('util')
 var data2xml = require('data2xml');
 var convert = data2xml({
         xmlHeader: '<?xml version="1.0" encoding="utf-8"?>\n<?qbxml version="13.0"?>\n'
     });
+
+const QbsdkQueueItem = require('../../lib/models/qbsdk-queue-item');
 
 // Public
 module.exports = {
@@ -24,10 +27,8 @@ module.exports = {
      *
      * @param callback(err, requestArray)
      */
-    fetchRequests: function (callback) {
-        mongoUtil.getUnprocessedTasks(function(tasks) {
-            callback(null, tasks)
-        })
+    fetchRequests: async () => {
+        return await QbsdkQueueItem.find({ processed: false });
     },
 
     /**
@@ -36,11 +37,14 @@ module.exports = {
      *
      * @param response - qbXML response
      */
-    handleResponse: function(ticket, response) {
-        mongoUtil.processTaskByTicket(ticket, function(err) {
-            if(err) console.log(err);
+    handleResponse: async (ticket, response) => {
+        await QbsdkQueueItem.findOneAndUpdate({ ticket }, { processed: true });
+        parseString(response, function(err,result) {
+            const trimmed = result;
+            console.log(util.inspect(trimmed, { showHidden: false, depth: 10}));
         })
-        console.log(response);
+
+        // console.log(response);
     },
 
     /**
@@ -59,17 +63,17 @@ module.exports = {
     *
     * @param callback(err, requestArray)
     */
-    buildXML: function(ticket, task) {
-        mongoUtil.setTicketToTask(task._id, ticket, function(err) {
-            if(err) console.log(err);
-        });
+    buildXML: async function(ticket, task) {
+        await QbsdkQueueItem.findOneAndUpdate({ _id: task._id }, { ticket });
         var xml = convert(
             'QBXML',
             {
                 QBXMLMsgsRq: {
                     _attr: { onError: 'stopOnError' },
                     ItemInventoryQueryRq: {
-                        MaxReturned: 1
+                        MaxReturned: 2,
+                        IncludeRetElement: {},
+                        OwnerID: 0
                     },
                 },
             }
