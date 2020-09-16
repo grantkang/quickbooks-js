@@ -64,7 +64,7 @@ module.exports = {
     * @param callback(err, requestArray)
     */
     buildXML: async function(ticket, task) {
-        await QbsdkQueueItem.findOneAndUpdate({ _id: task._id }, { ticket });
+        const queueItem = await QbsdkQueueItem.findOneAndUpdate({ _id: task._id }, { ticket, updatedAt: new Date() });
         var xml = convert(
             'QBXML',
             {
