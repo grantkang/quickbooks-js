@@ -12,12 +12,9 @@
  */
 var parseString = require('xml2js').parseString;
 const util = require('util')
-var data2xml = require('data2xml');
-var convert = data2xml({
-        xmlHeader: '<?xml version="1.0" encoding="utf-8"?>\n<?qbxml version="13.0"?>\n'
-    });
 
 const QbsdkQueueItem = require('../../lib/models/qbsdk-queue-item');
+const ItemInventoryRequestBuilder = require('./requestBuilders/item-inventory-request-builder');
 
 // Public
 module.exports = {
@@ -64,20 +61,16 @@ module.exports = {
     * @param callback(err, requestArray)
     */
     buildXML: async function(ticket, task) {
-        const queueItem = await QbsdkQueueItem.findOneAndUpdate({ _id: task._id }, { ticket, updatedAt: new Date() });
-        var xml = convert(
-            'QBXML',
-            {
-                QBXMLMsgsRq: {
-                    _attr: { onError: 'stopOnError' },
-                    ItemInventoryQueryRq: {
-                        MaxReturned: 2,
-                        IncludeRetElement: {},
-                        OwnerID: 0
-                    },
-                },
-            }
-        );
+        const queueItem = await QbsdkQueueItem.findOneAndUpdate({ _id: task._id }, { ticket });
+        const { resourceType } = queueItem;
+
+        let queryRequestBuilder;
+
+        if(resourceType === 'ItemInventory') {
+            queryRequestBuilder = new ItemInventoryRequestBuilder(queueItem);
+        }
+
+        const xml = await queryRequestBuilder.buildXML();
         return xml;
     }
 }
