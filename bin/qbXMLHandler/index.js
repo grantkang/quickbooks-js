@@ -17,6 +17,8 @@ const util = require('util')
 const QbsdkQueueItem = require('../../lib/models/qbsdk-queue-item');
 const ItemInventoryRequestBuilder = require('./requestBuilders/item-inventory-request-builder');
 const ItemInventoryResponseProcessor = require('./responseProcessors/item-inventory-response-processor');
+const CustomerRequestBuilder = require('./requestBuilders/customer-request-builder');
+const CustomerResponseProcessor = require('./responseProcessors/customer-response-processor');
 
 // Public
 module.exports = {
@@ -60,6 +62,8 @@ module.exports = {
 
         if (resourceType === 'ItemInventory') {
             responseProcessor = new ItemInventoryResponseProcessor(body, queueItem);
+        } else if (resourceType === 'Customer') {
+            responseProcessor = new CustomerResponseProcessor(body, queueItem);
         }
 
         await responseProcessor.process();
@@ -90,6 +94,8 @@ module.exports = {
 
         if(resourceType === 'ItemInventory') {
             queryRequestBuilder = new ItemInventoryRequestBuilder(queueItem);
+        } else if (resourceType === 'Customer') {
+            queryRequestBuilder = new CustomerRequestBuilder(queueItem);
         }
 
         const xml = await queryRequestBuilder.buildXML();
