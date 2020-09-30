@@ -10,22 +10,36 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-var parseString = require('xml2js').parseString;
+var xml2js = require('xml2js');
+const parser = new xml2js.Parser({explicitArray: false, attrkey: '_attr'})
 const util = require('util')
 
 const QbsdkQueueItem = require('../../lib/models/qbsdk-queue-item');
 const ItemInventoryRequestBuilder = require('./requestBuilders/item-inventory-request-builder');
+const ItemInventoryResponseProcessor = require('./responseProcessors/item-inventory-response-processor');
 
 // Public
 module.exports = {
 
     /**
-     * Fetches all unproccessed qbsdk requests
+     * Fetches all unproccessed qbsdk requests for the current session
      *
-     * @param callback(err, requestArray)
+     * @param ticket - a ticket used as a session identifier
      */
-    fetchRequests: async () => {
-        return await QbsdkQueueItem.find({ processed: false });
+    fetchRequests: async (ticket) => {
+        return await QbsdkQueueItem.find({ticket});
+    },
+
+    /**
+     * Marks all unprocessed qbsdk requests with the newly created session ticket
+     *
+     * @param ticket - a ticket used as a session identifier
+     *
+     * @returns n - the number of unprocessed qbsdk requests
+     */
+    initializeRequests: async (ticket) => {
+        const { n } = await QbsdkQueueItem.updateMany({ processed: false }, { ticket });
+        return n;
     },
 
     /**
@@ -34,14 +48,21 @@ module.exports = {
      *
      * @param response - qbXML response
      */
-    handleResponse: async (ticket, response) => {
-        await QbsdkQueueItem.findOneAndUpdate({ ticket }, { processed: true });
-        parseString(response, function(err,result) {
-            const trimmed = result;
-            console.log(util.inspect(trimmed, { showHidden: false, depth: 10}));
-        })
+    handleResponse: async (ticket, responseInXML) => {
+        const response = (await parser.parseStringPromise(responseInXML)).QBXML.QBXMLMsgsRs;
+        const body = response[Object.keys(response)[0]];
+        const { requestID } = body._attr;
 
-        // console.log(response);
+        const queueItem = await QbsdkQueueItem.findOne({ _id: requestID });
+        const { resourceType } = queueItem;
+
+        let responseProcessor;
+
+        if (resourceType === 'ItemInventory') {
+            responseProcessor = new ItemInventoryResponseProcessor(body, queueItem);
+        }
+
+        await responseProcessor.process();
     },
 
     /**
@@ -60,8 +81,9 @@ module.exports = {
     *
     * @param callback(err, requestArray)
     */
-    buildXML: async function(ticket, task) {
-        const queueItem = await QbsdkQueueItem.findOneAndUpdate({ _id: task._id }, { ticket });
+    buildXML: async function(ticket) {
+        const queueItem = await QbsdkQueueItem.findOne({ ticket });
+        if(!queueItem) return '';
         const { resourceType } = queueItem;
 
         let queryRequestBuilder;
