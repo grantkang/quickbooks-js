@@ -1,12 +1,11 @@
 const QBXMLResponseProcessor = require("./qbxml-response-processor");
 const InventoryItem = require('../../../lib/models/inventory-item');
-const QueueItem = require('../../../lib/models/qbsdk-queue-item');
 
-const itemMapper = qbItemInventory => {
+const itemMapper = qbdItemInventory => {
   const { ListID, FullName, EditSequence, Name, IsActive, SalesDesc, SalesPrice, TimeCreated, TimeModified, DataExtRet } = qbItemInventory;
   const customFields = [];
-  if(DataExtRet) {
-    if(Array.isArray(DataExtRet)) customFields.push(...DataExtRet);
+  if (DataExtRet) {
+    if (Array.isArray(DataExtRet)) customFields.push(...DataExtRet);
     else customFields.push(DataExtRet);
   }
 
@@ -39,9 +38,9 @@ module.exports = class ItemInventoryResponseProcessor extends QBXMLResponseProce
 
   async processQueryResponse() {
     const { responseBody } = this;
-    const inventoryItems = Array.isArray(responseBody.ItemInventoryRet) ? responseBody.ItemInventoryRet : [responseBody.ItemInventoryRet];
+    const qbdInventoryItems = Array.isArray(responseBody.ItemInventoryRet) ? responseBody.ItemInventoryRet : [responseBody.ItemInventoryRet];
 
-    responseBody.ItemInventoryRet.map(itemMapper);
+    const inventoryItems = qbdInventoryItems.map(itemMapper);
 
     await Promise.all(inventoryItems.map(item => InventoryItem.updateOne({ qbdId: item.qbdId }, item, { upsert: true })));
 
