@@ -37,7 +37,7 @@ module.exports = class QBXMLRequestBuilder {
 
     const { queueItem } = this;
 
-    const { action, resourceType, queryParams } = queueItem;
+    const { action, queryParams } = queueItem;
 
 
     if(action === 'query') {
@@ -45,7 +45,6 @@ module.exports = class QBXMLRequestBuilder {
       if(!queueItem.queryParams) {
         queueItem.queryParams = this.getDefaultQueryParams();
         await queueItem.save();
-        console.log(body);
       }
       const { queryParams } = queueItem;
 
@@ -58,13 +57,5 @@ module.exports = class QBXMLRequestBuilder {
       'QBXML',
       body
     );
-  }
-
-  make(body, action) {
-
-  }
-
-  processXML(xml) {
-
   }
 }
