@@ -7,16 +7,16 @@ module.exports = {
     if (qbdId != null) qbdCustomer.ListID = qbdId;
     if (qbdFullName != null) qbdCustomer.FullName = qbdFullName;
     if (qbdEditSequence != null) qbdCustomer.EditSequence = qbdEditSequence;
-    if (companyName != null) qbdCustomer.CompanyName = companyName;
     if (isActive != null) qbdCustomer.IsActive = isActive;
-    if (phone != null) qbdCustomer.Phone = phone;
+    if (companyName != null) qbdCustomer.CompanyName = companyName;
     if (addressBlock != null) {
-      qbdCustomer.ShipAddressBlock = addressBlock.split('\n').reduce((ShipAddressBlock, ShipAddressLine, i) => {
-        ShipAddressBlock[`Addr${i + 1}`] = ShipAddressLine;
+      qbdCustomer.ShipAddress = addressBlock.split('\n').reduce((ShipAddress, ShipAddressLine, i) => {
+        ShipAddress[`Addr${i + 1}`] = ShipAddressLine;
+        return ShipAddress;
       }, {})
     }
+    if (phone != null) qbdCustomer.Phone = phone;
     if (resaleNumber != null) qbdCustomer.ResaleNumber = resaleNumber;
-    if (balance != null) qbdCustomer.Balance = balance;
 
     return qbdCustomer;
   },
