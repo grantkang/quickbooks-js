@@ -1,10 +1,11 @@
 const QBXMLRequestBuilder = require('./qbxml-request-builder');
 const InventoryItem = require('../../../lib/models/inventory-item');
+const ItemInventoryConverter = require('../converters/item-inventory-converter');
 
 module.exports = class ItemInventoryRequestBuilder extends QBXMLRequestBuilder {
 
   constructor(queueItem) {
-    super(queueItem, InventoryItem);
+    super(queueItem, InventoryItem, ItemInventoryConverter);
   }
 
   getDefaultQueryParams() {
@@ -19,4 +20,5 @@ module.exports = class ItemInventoryRequestBuilder extends QBXMLRequestBuilder {
       OwnerID: 0
     }
   }
+
 }

@@ -5,9 +5,10 @@ const convert = data2xml({
 });
 
 module.exports = class QBXMLRequestBuilder {
-  constructor(queueItem, mongooseModel) {
+  constructor(queueItem, mongooseModel, converter) {
     this.queueItem = queueItem;
     this.mongooseModel = mongooseModel;
+    this.converter = converter;
   }
 
   getRequestName(action) {
@@ -15,47 +16,103 @@ module.exports = class QBXMLRequestBuilder {
     return `${resourceType}${action}Rq`;
   }
 
+  getRequestElementName(action) {
+    const { resourceType } = this.queueItem;
+    return `${resourceType}${action}`;
+  }
+
   getDefaultQueryParams() {
     throw new Error('method `getDefaultQueryParams` must be implemeneted');
   }
 
-  async isAModWithNoEditSequence() {
+  async isAMod() {
+    const { action, resourceId } = this.queueItem;
     const resource = await this.mongooseModel.findOne({_id: resourceId});
-    const { action, resourceId, editSequence } = this.queueItem;
-
-    const isAMod = !!resource.qbdId && action === 'addOrModify';
-
-    const hasNoEditSequence = !editSequence;
-
-    return isAMod && hasNoEditSequence;
+    return resource.qbdId && action === 'addOrModify';
   }
 
+  async buildQueryBody() {
+    const body = {};
+    body.QBXMLMsgsRq = { _attr: { onError: 'stopOnError' } };
+    const { queueItem } = this;
+    const { resourceId } = queueItem;
+    const requestName = this.getRequestName('Query');
 
-  async buildXML() {
+    if (!queueItem.queryParams) {
+      queueItem.queryParams = this.getDefaultQueryParams();
+      await queueItem.save();
+    }
+
+    body.QBXMLMsgsRq[requestName] = queueItem.queryParams;
+
+    await queueItem.save();
+
+    return body;
+  }
+
+  async buildAddOrModifyBody() {
     const body = {};
     body.QBXMLMsgsRq = { _attr: { onError: 'stopOnError' } };
 
     const { queueItem } = this;
+    const { resourceId } = queueItem;
+    let requestName;
+    let requestElementName;
 
-    const { action, queryParams } = queueItem;
-
-
-    if(action === 'query') {
-      const requestName = this.getRequestName('Query');
-      if(!queueItem.queryParams) {
-        queueItem.queryParams = this.getDefaultQueryParams();
-        await queueItem.save();
-      }
-      const { queryParams } = queueItem;
-
-      body.QBXMLMsgsRq[requestName] = queryParams;
-    } else if(action === 'addOrModify') {
-      // Do stuff
+    if (this.isAMod()) {
+      requestName = this.getRequestName('Mod');
+      requestElementName = this.getRequestElementName('Mod');
+    } else {
+      requestName = this.getRequestName('Add');
+      requestElementName = this.getRequestElementName('Add');
     }
 
-    return convert(
+    const dbObject = await this.mongooseModel.findOne({ _id: resourceId });
+    if (dbObject.qbdId != null) dbObject.qbdFullName = null;
+
+    const quickbooksObject = this.converter.toQBD(dbObject);
+    const { DataExt } = quickbooksObject;
+
+    delete quickbooksObject.DataExt;
+
+    body.QBXMLMsgsRq[requestName] = {
+      _attr: {
+        requestID: queueItem._id
+      },
+      [requestElementName]: quickbooksObject
+    }
+
+    if (DataExt != null && DataExt.length > 0) {
+      const DataExtModRq = DataExt.map(dataExtItem => {
+        return {
+          _attr: {
+            requestID: queueItem._id
+          },
+          DataExtMod: dataExtItem
+        }
+      });
+      body.QBXMLMsgsRq.DataExtModRq = DataExtModRq;
+    }
+
+    return body;
+  }
+
+  async buildXML() {
+    const { action } = this.queueItem;
+
+    let body;
+
+    if(action === 'query') {
+      body = await this.buildQueryBody();
+    } else if(action === 'addOrModify') {
+      body = await this.buildAddOrModifyBody();
+    }
+
+    const xml = convert(
       'QBXML',
       body
     );
+
+    return xml;
   }
 }
