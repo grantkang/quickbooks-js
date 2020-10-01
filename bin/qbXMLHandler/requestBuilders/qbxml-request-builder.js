@@ -16,7 +16,7 @@ module.exports = class QBXMLRequestBuilder {
     return `${resourceType}${action}Rq`;
   }
 
-  getRequestElementName(action) {
+  getRequestChildName(action) {
     const { resourceType } = this.queueItem;
     return `${resourceType}${action}`;
   }
@@ -57,14 +57,14 @@ module.exports = class QBXMLRequestBuilder {
     const { queueItem } = this;
     const { resourceId } = queueItem;
     let requestName;
-    let requestElementName;
+    let requestChildName;
 
     if (this.isAMod()) {
       requestName = this.getRequestName('Mod');
-      requestElementName = this.getRequestElementName('Mod');
+      requestChildName = this.getRequestChildName('Mod');
     } else {
       requestName = this.getRequestName('Add');
-      requestElementName = this.getRequestElementName('Add');
+      requestChildName = this.getRequestChildName('Add');
     }
 
     const dbObject = await this.mongooseModel.findOne({ _id: resourceId });
@@ -79,7 +79,7 @@ module.exports = class QBXMLRequestBuilder {
       _attr: {
         requestID: queueItem._id
       },
-      [requestElementName]: quickbooksObject
+      [requestChildName]: quickbooksObject
     }
 
     if (DataExt != null && DataExt.length > 0) {
@@ -93,6 +93,10 @@ module.exports = class QBXMLRequestBuilder {
       });
       body.QBXMLMsgsRq.DataExtModRq = DataExtModRq;
     }
+
+    queueItem.queryParams = body.QBXMLMsgsRq;
+
+    await queueItem.save();
 
     return body;
   }
