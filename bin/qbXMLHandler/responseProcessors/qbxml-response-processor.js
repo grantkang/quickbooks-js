@@ -6,15 +6,26 @@ module.exports = class QBXMLResponseProcessor {
     this.mongooseModel = mongooseModel;
   }
 
+  async isAMod() {
+    const { action, resourceId } = this.queueItem;
+    const resource = await this.mongooseModel.findOne({ _id: resourceId });
+    return resource.qbdId && action === 'addOrModify';
+  }
+
   async processQueryResponse() {
-    throw new Error('method `processQuery` must be implemented');
+    throw new Error('method `processQueryResponse` must be implemented');
+  }
+
+  async processAddOrModifyResponse() {
+    throw new Error('method `processAddOrModifyResponse` must be implemented');
   }
 
   async process() {
-    const { queueItem } = this;
-    const { action, queryParams } = queueItem;
+    const { action } = this.queueItem;
     if (action === 'query') {
       await this.processQueryResponse();
+    } else if (action === 'addOrModify') {
+      await this.processAddOrModifyResponse();
     }
   }
 }

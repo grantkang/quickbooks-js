@@ -1,59 +1,44 @@
 const QBXMLResponseProcessor = require("./qbxml-response-processor");
 const InventoryItem = require('../../../lib/models/inventory-item');
-
-const itemMapper = qbdItemInventory => {
-  const { ListID, FullName, EditSequence, Name, IsActive, SalesDesc, SalesPrice, TimeCreated, TimeModified, DataExtRet } = qbItemInventory;
-  const customFields = [];
-  if (DataExtRet) {
-    if (Array.isArray(DataExtRet)) customFields.push(...DataExtRet);
-    else customFields.push(DataExtRet);
-  }
-
-  const item = {};
-  item.qbdId = ListID;
-  item.qbdFullName = FullName;
-  item.qbdEditSequence = EditSequence;
-  item.name = Name;
-  item.isActive = IsActive;
-  item.description = SalesDesc;
-  item.price = SalesPrice;
-  item.createdAt = new Date(TimeCreated);
-  item.updatedAt = new Date(TimeModified);
-
-
-  customFields.forEach(customField => {
-    const { DataExtName, DataExtValue } = customField;
-    if (DataExtName === 'CATEGORY') item.category = DataExtValue;
-    if (DataExtName === 'IMAGEURL') item.imageUrl = DataExtValue;
-    if (DataExtName === 'BRAND') item.brand = DataExtValue;
-  });
-
-  return item;
-}
+const ItemInventoryConverter = require('../converters/item-inventory-converter');
 
 module.exports = class ItemInventoryResponseProcessor extends QBXMLResponseProcessor {
   constructor(responseBody, queueItem) {
-    super(responseBody, queueItem, InventoryItem);
+    super(responseBody, queueItem, InventoryItem, ItemInventoryConverter);
   }
 
   async processQueryResponse() {
-    const { responseBody } = this;
-    const qbdInventoryItems = Array.isArray(responseBody.ItemInventoryRet) ? responseBody.ItemInventoryRet : [responseBody.ItemInventoryRet];
+    const { ItemInventoryQueryRs } = this.responseBody;
 
-    const inventoryItems = qbdInventoryItems.map(itemMapper);
+    const qbdInventoryItems = Array.isArray(ItemInventoryQueryRs.ItemInventoryRet) ? ItemInventoryQueryRs.ItemInventoryRet : [ItemInventoryQueryRs.ItemInventoryRet];
+
+    const inventoryItems = qbdInventoryItems.map(ItemInventoryConverter.fromQBD);
 
     await Promise.all(inventoryItems.map(item => InventoryItem.updateOne({ qbdId: item.qbdId }, item, { upsert: true })));
 
-    const amountRemaining = Number.parseInt(responseBody._attr.iteratorRemainingCount);
+    const amountRemaining = Number.parseInt(ItemInventoryQueryRs._attr.iteratorRemainingCount);
     const { queueItem } = this;
 
     if (amountRemaining > 0) {
       queueItem.queryParams._attr.iterator = 'Continue';
-      queueItem.queryParams._attr.iteratorID = responseBody._attr.iteratorID;
+      queueItem.queryParams._attr.iteratorID = ItemInventoryQueryRs._attr.iteratorID;
       queueItem.markModified('queryParams');
     } else {
       queueItem.processed = true;
     }
     await queueItem.save();
+  }
+
+  async processAddOrModifyResponse() {
+    let responseName = this.isAMod ? 'ItemInventoryModRs' : 'ItemInventoryAddRs';
+    const item = await InventoryItem.findById(this.queueItem.resourceId);
+    const { statusCode } = this.responseBody[responseName]._attr.statusCode;
+    if(statusCode === '3200') {
+      item.qbdEditSequence = this.responseBody[responseName].ItemInventoryRet.EditSequence;
+      await item.save();
+    } else {
+      this.queueItem.processed = true;
+      await this.queueItem.save();
+    }
   }
 }

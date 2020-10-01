@@ -51,9 +51,8 @@ module.exports = {
      * @param response - qbXML response
      */
     handleResponse: async (ticket, responseInXML) => {
-        const response = (await parser.parseStringPromise(responseInXML)).QBXML.QBXMLMsgsRs;
-        const body = response[Object.keys(response)[0]];
-        const { requestID } = body._attr;
+        const body = (await parser.parseStringPromise(responseInXML)).QBXML.QBXMLMsgsRs;
+        const { requestID } = body[Object.keys(body)[0]]._attr;
 
         const queueItem = await QbsdkQueueItem.findOne({ _id: requestID });
         const { resourceType } = queueItem;
@@ -86,19 +85,20 @@ module.exports = {
     * @param callback(err, requestArray)
     */
     buildXML: async function(ticket) {
-        const queueItem = await QbsdkQueueItem.findOne({ ticket });
-        if(!queueItem) return '';
+        const queueItem = await QbsdkQueueItem.findOne({ ticket, processed: false });
+        if (!queueItem) return '';
         const { resourceType } = queueItem;
 
         let queryRequestBuilder;
 
-        if(resourceType === 'ItemInventory') {
+        if (resourceType === 'ItemInventory') {
             queryRequestBuilder = new ItemInventoryRequestBuilder(queueItem);
         } else if (resourceType === 'Customer') {
             queryRequestBuilder = new CustomerRequestBuilder(queueItem);
         }
 
         const xml = await queryRequestBuilder.buildXML();
+
         return xml;
     }
 }
