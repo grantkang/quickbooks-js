@@ -1,7 +1,7 @@
 
 module.exports = {
   toQBD: customer => {
-    const { qbdId, qbdFullName, qbdEditSequence, companyName, isActive, phone, addressBlock, resaleNumber, balance } = customer;
+    const { qbdId, qbdFullName, qbdEditSequence, companyName, isActive, phone, addressBlock, resaleNumber } = customer;
 
     const qbdCustomer = {};
     if (qbdId != null) qbdCustomer.ListID = qbdId;
