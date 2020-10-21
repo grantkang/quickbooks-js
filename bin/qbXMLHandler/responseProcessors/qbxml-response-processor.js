@@ -1,9 +1,10 @@
 
 module.exports = class QBXMLResponseProcessor {
-  constructor(responseBody, queueItem, mongooseModel) {
+  constructor(responseBody, queueItem, mongooseModel, converter) {
     this.responseBody = responseBody;
     this.queueItem = queueItem;
     this.mongooseModel = mongooseModel;
+    this.converter = converter;
   }
 
   async isAMod() {
