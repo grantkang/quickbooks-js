@@ -32,7 +32,7 @@ module.exports = {
     return qbdItemInventory;
   },
   fromQBD: qbdItemInventory => {
-    const { ListID, FullName, EditSequence, Name, IsActive, SalesDesc, SalesPrice, TimeCreated, TimeModified, DataExtRet } = qbdItemInventory;
+    const { ListID, FullName, EditSequence, Name, IsActive, SalesDesc, SalesPrice, TimeCreated, TimeModified, DataExtRet, IncomeAccountRef } = qbdItemInventory;
     const customFields = [];
     if (DataExtRet) {
       if (Array.isArray(DataExtRet)) customFields.push(...DataExtRet);
@@ -49,6 +49,7 @@ module.exports = {
     itemInventory.price = SalesPrice;
     itemInventory.createdAt = new Date(TimeCreated);
     itemInventory.updatedAt = new Date(TimeModified);
+    itemInventory.incomeAccount = IncomeAccountRef.FullName;
 
 
     customFields.forEach(customField => {
