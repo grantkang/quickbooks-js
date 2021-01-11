@@ -16,6 +16,7 @@ module.exports = class ItemInventoryRequestBuilder extends QBXMLRequestBuilder {
         iterator: 'Start'
       },
       MaxReturned: 100,
+      ActiveStatus: "All",
       IncludeRetElement: '',
       OwnerID: 0
     }
