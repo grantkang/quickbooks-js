@@ -44,7 +44,7 @@ module.exports = {
     itemInventory.qbdFullName = FullName;
     itemInventory.qbdEditSequence = EditSequence;
     itemInventory.name = Name;
-    itemInventory.isActive = IsActive;
+    itemInventory.isActive = IsActive === "true";
     itemInventory.description = SalesDesc;
     itemInventory.price = SalesPrice;
     itemInventory.createdAt = new Date(TimeCreated);
